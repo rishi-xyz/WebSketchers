@@ -1,7 +1,8 @@
 "use client";
-import { SignInButton } from "@clerk/nextjs";
+import { SignInButton, UserButton } from "@clerk/nextjs";
 import React from "react";
 import { Button } from "./ui/button";
+import Link from "next/link";
 
 export const Navbar = () => {
   return (
@@ -14,9 +15,9 @@ export const Navbar = () => {
           <div className="mr-5">
             <div className="absolute inset-0 outline outline-4 -outline-offset-4 outline-primary/65 rounded-xl"></div>
           </div>
-          <Button className="rounded-xl" >
+          <Link href={"/sign-in"} className="px-3 py-2 relative rounded-xl text-primary  border-2 border-primary shadow hover:bg-primary/90">
             <SignInButton />
-          </Button>
+          </Link>
         </div>
       </div>
     </header>
