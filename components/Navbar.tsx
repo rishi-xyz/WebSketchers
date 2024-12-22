@@ -1,7 +1,6 @@
 "use client";
-import { SignInButton, UserButton } from "@clerk/nextjs";
+import { SignInButton } from "@clerk/nextjs";
 import React from "react";
-import { Button } from "./ui/button";
 import Link from "next/link";
 
 export const Navbar = () => {
