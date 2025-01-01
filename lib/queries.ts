@@ -20,10 +20,11 @@ import { CreateFunnelFormSchema, CreateMediaType, UpsertFunnelPage } from "./typ
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
+//gets the current logged in users details from the database and returns the user details
 export const getAuthUserDetails = async () => {
   const user = await currentUser();
   if (!user) {
-    return;
+    return;//user is not logged in
   }
   const userData = await db.user.findUnique({
     where: {
@@ -42,10 +43,12 @@ export const getAuthUserDetails = async () => {
       },
       Permissions: true,
     },
+    //returns the Agency with all sidebar options and subaccounts with their sidebar options
   });
   return userData;
 };
 
+//logs the activity by the user
 export const saveActivityLogsNotification = async ({
   agencyId,
   description,
@@ -130,19 +133,23 @@ export const saveActivityLogsNotification = async ({
   }
 };
 
+//creates a new user in the database
 export const createTeamUser = async (agencyId: string, user: User) => {
   if (user.role === "AGENCY_OWNER") {
-    return null;
+    return null;//as the they already have access
   }
   const response = await db.user.create({ data: { ...user } });
   return response;
 };
 
+//verifies if the user has been invited to an agency and accepts the invitation
 export const verifyAndAcceptInvitation = async () => {
+  //if user is not logged in redirect to sign in page
   const user = await currentUser();
   if (!user) {
     return redirect("/sign-in");
   }
+  //check if the user has been invited to an agency
   const invitationExists = await db.invitation.findUnique({
     where: {
       email: user.emailAddresses[0].emailAddress,
@@ -150,6 +157,7 @@ export const verifyAndAcceptInvitation = async () => {
     },
   });
   if (invitationExists) {
+    //if the invitation exists then create the user
     const userDetails = await createTeamUser(invitationExists.agencyId, {
       email: invitationExists.email,
       agencyId: invitationExists.agencyId,
@@ -160,23 +168,28 @@ export const verifyAndAcceptInvitation = async () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    //save the activity log notification that the user has joined the agency
     await saveActivityLogsNotification({
       agencyId: invitationExists.agencyId,
       description: `Joined`,
       subAccountId: undefined,
     });
     if (userDetails) {
+      //update the user metadata with the role 
       (await clerkClient()).users.updateUserMetadata(user.id, {
         privateMetadata: { role: userDetails.role || "SUBACCOUNT_USER" },
       });
+      //delete the invitation from the database
       await db.invitation.delete({
         where: { email: userDetails.email },
       });
+      //return the agency id of the user
       return userDetails.agencyId;
     } else {
       return null;
     }
   } else {
+    //if there are no invitations return agency id of the current user if exists or null
     const agency = await db.user.findUnique({
       where: {
         email: user.emailAddresses[0].emailAddress,
@@ -187,7 +200,7 @@ export const verifyAndAcceptInvitation = async () => {
 };
 
 
-export const updateAgencyDetails = async (agencyId: string, agencyDetails:Partial<Agency>)=>{
+export const updateAgencyDetails = async (agencyId: string, agencyDetails: Partial<Agency>) => {
   const response = await db.agency.update({
     where: { id: agencyId },
     data: { ...agencyDetails },
@@ -195,14 +208,14 @@ export const updateAgencyDetails = async (agencyId: string, agencyDetails:Partia
   return response;
 }
 
-export const deleteAgency = async (agencyId: string)=>{
+export const deleteAgency = async (agencyId: string) => {
   const response = await db.agency.delete({
-    where:{id:agencyId}
+    where: { id: agencyId }
   })
   return response;
 }
 
-export const initUser = async (newUser: Partial<User>) =>{
+export const initUser = async (newUser: Partial<User>) => {
   const user = await currentUser();
   if (!user) {
     return;
@@ -212,7 +225,7 @@ export const initUser = async (newUser: Partial<User>) =>{
       email: user.emailAddresses[0].emailAddress,
     },
     update: newUser,
-    create:{
+    create: {
       id: user.id,
       avatarUrl: user.imageUrl,
       email: user.emailAddresses[0].emailAddress,
@@ -227,140 +240,140 @@ export const initUser = async (newUser: Partial<User>) =>{
   return userData;
 }
 
-export const upsertAgency = async (agency:Agency, price?:Plan)=>{
-  if(!agency.companyEmail){
+export const upsertAgency = async (agency: Agency, price?: Plan) => {
+  if (!agency.companyEmail) {
     return null;
   }
-  try{
-    const  agencyDetails = await db.agency.upsert({
+  try {
+    const agencyDetails = await db.agency.upsert({
       where: { id: agency.id },
       update: agency,
-      create:{
-        users:{
-          connect:{email: agency.companyEmail},
+      create: {
+        users: {
+          connect: { email: agency.companyEmail },
         },
         ...agency,
-        SidebarOption:{
-          create:[{
-            name:"Dashboard",
+        SidebarOption: {
+          create: [{
+            name: "Dashboard",
             icon: "category",
             link: `/agency/${agency.id}`,
-          },{
+          }, {
             name: "lauchpad",
             icon: "clipboardIcon",
             link: `/agency/${agency.id}/launchpad`,
-          },{
-            name:"Settings",
+          }, {
+            name: "Settings",
             icon: "settings",
             link: `/agency/${agency.id}/settings`,
-          },{
-            name:"Sub Accounts",
-            icon:"person",
+          }, {
+            name: "Sub Accounts",
+            icon: "person",
             link: `/agency/${agency.id}/all-accounts`,
-          },{
-            name:"Team",
-            icon:"sheild",
+          }, {
+            name: "Team",
+            icon: "sheild",
             link: `/agency/${agency.id}/team`,
           },],
         },
       },
     })
     return agencyDetails;
-  }catch(error){
+  } catch (error) {
     console.log(error);
   }
 }
 
-export const getNotificationAndUser = async (agencyId: string)=>{
-  try{
+export const getNotificationAndUser = async (agencyId: string) => {
+  try {
     const response = await db.notification.findMany({
-      where:{
-        Agency:{
+      where: {
+        Agency: {
           id: agencyId,
         }
       },
-      include:{
-        User:true,
+      include: {
+        User: true,
       },
-      orderBy:{
-        createdAt:"desc",
+      orderBy: {
+        createdAt: "desc",
       },
     });
     return response;
-  }catch(error){
+  } catch (error) {
     console.log(error);
   }
 }
 
-export const upsertSubAccount = async (subAccount:SubAccount)=>{
-  if(!subAccount.companyEmail){
+export const upsertSubAccount = async (subAccount: SubAccount) => {
+  if (!subAccount.companyEmail) {
     return null;
   }
-  const agencyOwner  = await db.user.findFirst({
-    where:{
-      Agency:{
+  const agencyOwner = await db.user.findFirst({
+    where: {
+      Agency: {
         id: subAccount.agencyId,
       },
-      role:"AGENCY_OWNER",
+      role: "AGENCY_OWNER",
     },
   });
-  if(!agencyOwner){
+  if (!agencyOwner) {
     return console.log("🔴Erorr could not create subaccount");
   }
   const permissionId = v4();
   const response = await db.subAccount.upsert({
     where: { id: subAccount.id },
     update: subAccount,
-    create:{
+    create: {
       ...subAccount,
-      Permissions:{
-        create:{
-          access:true,
-          email:agencyOwner.email,
-          id:permissionId,
+      Permissions: {
+        create: {
+          access: true,
+          email: agencyOwner.email,
+          id: permissionId,
         },
-        connect:{
-          subAccountId:subAccount.id,
-          id:permissionId,
+        connect: {
+          subAccountId: subAccount.id,
+          id: permissionId,
         },
       },
-      Pipeline:{
-        create:{name: "Lead Cycle"},
+      Pipeline: {
+        create: { name: "Lead Cycle" },
       },
-      SidebarOption:{
-        create:[
+      SidebarOption: {
+        create: [
           {
-            name:"Launchpad",
-            icon:"clipboardIcon",
-            link:`/subaccount/${subAccount.id}/launchpad`,
-          },{
-            name:"Settings",
-            icon:"settings",
-            link:`/subaccount/${subAccount.id}/settings`,
-          },{
-            name:"Funnels",
-            icon:"pipelines",
-            link:`/subaccount/${subAccount.id}/funnels`,
-          },{
-            name:"Media",
-            icon:"database",
-            link:`/subaccount/${subAccount.id}/media`,
-          },{
-            name:"Automations",
-            icon:"chip",
-            link:`/subaccount/${subAccount.id}/automations`,
-          },{
-            name:"Pipelines",
-            icon:"flag",
-            link:`/subaccount/${subAccount.id}/pipelines`,
-          },{
-            name:"Contacts",
-            icons:"person",
-            link:`/subaccount/${subAccount.id}/contacts`,
-          },{
-            name:"Dashboard",
-            icons:"category",
-            link:`/subaccount/${subAccount.id}`,
+            name: "Launchpad",
+            icon: "clipboardIcon",
+            link: `/subaccount/${subAccount.id}/launchpad`,
+          }, {
+            name: "Settings",
+            icon: "settings",
+            link: `/subaccount/${subAccount.id}/settings`,
+          }, {
+            name: "Funnels",
+            icon: "pipelines",
+            link: `/subaccount/${subAccount.id}/funnels`,
+          }, {
+            name: "Media",
+            icon: "database",
+            link: `/subaccount/${subAccount.id}/media`,
+          }, {
+            name: "Automations",
+            icon: "chip",
+            link: `/subaccount/${subAccount.id}/automations`,
+          }, {
+            name: "Pipelines",
+            icon: "flag",
+            link: `/subaccount/${subAccount.id}/pipelines`,
+          }, {
+            name: "Contacts",
+            icons: "person",
+            link: `/subaccount/${subAccount.id}/contacts`,
+          }, {
+            name: "Dashboard",
+            icons: "category",
+            link: `/subaccount/${subAccount.id}`,
           },
         ],
       },
@@ -837,14 +850,14 @@ export const upsertFunnelPage = async (
       content: funnelPage.content
         ? funnelPage.content
         : JSON.stringify([
-            {
-              content: [],
-              id: '__body',
-              name: 'Body',
-              styles: { backgroundColor: 'white' },
-              type: '__body',
-            },
-          ]),
+          {
+            content: [],
+            id: '__body',
+            name: 'Body',
+            styles: { backgroundColor: 'white' },
+            type: '__body',
+          },
+        ]),
       funnelId,
     },
   })
