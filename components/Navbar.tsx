@@ -1,5 +1,4 @@
 "use client";
-import { SignInButton } from "@clerk/nextjs";
 import React from "react";
 import Link from "next/link";
 
@@ -15,7 +14,7 @@ export const Navbar = () => {
             <div className="absolute inset-0 outline outline-4 -outline-offset-4 outline-primary/65 rounded-xl"></div>
           </div>
           <Link href={"/sign-in"} className="px-3 py-2 relative rounded-xl text-primary  border-2 border-primary shadow hover:bg-primary/90">
-            <SignInButton />
+            Get Started
           </Link>
         </div>
       </div>
