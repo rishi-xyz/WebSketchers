@@ -1,3 +1,4 @@
+import AgencyDetails from "@/components/forms/agency-details";
 import { getAuthUserDetails, verifyAndAcceptInvitation } from "@/lib/queries";
 import { currentUser } from "@clerk/nextjs/server";
 import { Plan } from "@prisma/client";
@@ -32,12 +33,23 @@ const AgencyPage = async ({
           `/agency/${stateAgencyId}/${statePath}?code=${searchParams.code}`
         );
       } else {
-        return <div>Not Authorized</div>;
+        return redirect(`/agency/${agencyId}`);
       }
+    }else{
+      return <div>Not Authorized</div>;
     }
   }
   const authUser = await currentUser();
-  return <div>Agency Page</div>;
+  return (
+    <div className="flex justify-center items-center mt-4">
+      <div className="max-w-[850px] border-[1px] p-4 rounded-xl">
+        <h1 className="text-4xl">Create An Agency</h1>
+        <AgencyDetails
+          data={{companyEmail:authUser?.emailAddresses[0].emailAddress}}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default AgencyPage;
