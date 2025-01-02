@@ -13,7 +13,10 @@ export const Navbar = () => {
           <div className="mr-5">
             <div className="absolute inset-0 outline outline-4 -outline-offset-4 outline-primary/65 rounded-xl"></div>
           </div>
-          <Link href={"/sign-in"} className="px-3 py-2 relative rounded-xl text-primary  border-2 border-primary shadow hover:bg-primary/90">
+          <Link
+            href={"/sign-in"}
+            className="px-3 py-2 relative rounded-xl text-primary  border-2 border-primary shadow hover:bg-primary/90"
+          >
             Get Started
           </Link>
         </div>
